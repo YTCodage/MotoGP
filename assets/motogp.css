@@ -43,6 +43,7 @@ html, body {
   display: block;
   width: 100%;
   height: 100%;
+  touch-action: none;
 }
 
 /* =======================================================
@@ -1215,8 +1216,118 @@ html, body {
   border-radius: 4px;
   padding: 4px 10px;
   font-size: 10px;
-  color: #aaa;
+  color: #ddd;
+  letter-spacing: 0.4px;
+}
+
+#camera-tools {
+  width: 174px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  color: #fff;
+  background: rgba(10, 11, 14, 0.78);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.camera-tools-heading,
+.camera-tools-modes,
+.camera-tools-adjust {
+  display: flex;
+  align-items: center;
+}
+
+.camera-tools-heading {
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.camera-tools-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.camera-tools-title i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--mgp-red);
+  box-shadow: 0 0 8px rgba(225, 6, 0, 0.9);
+}
+
+.camera-tools-modes {
+  gap: 4px;
+}
+
+.camera-tools-modes button,
+.camera-tools-adjust button {
+  display: grid;
+  place-items: center;
+  min-width: 27px;
+  height: 26px;
+  padding: 0 5px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 3px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 900;
+  transition: background 150ms ease, border-color 150ms ease, opacity 150ms ease;
+}
+
+.camera-tools-modes button:hover,
+.camera-tools-adjust button:hover:not(:disabled) {
+  border-color: var(--mgp-red);
+  background: rgba(225, 6, 0, 0.78);
+}
+
+.camera-tools-modes #camera-view-toggle {
+  border-color: rgba(225, 6, 0, 0.62);
+  background: rgba(225, 6, 0, 0.2);
+}
+
+.camera-tools-adjust {
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.camera-tools-adjust span {
+  flex: 1;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-align: center;
+}
+
+.camera-tools-adjust button:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.camera-tools-tip {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 7px;
+  font-weight: 700;
   letter-spacing: 0.5px;
+  text-align: center;
+}
+
+#camera-tools button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
 /* MOBILE CONTROLS */
@@ -1429,5 +1540,12 @@ html, body {
   #minimap-canvas {
     width: 120px;
     height: 120px;
+  }
+  #camera-tools {
+    width: 160px;
+    padding: 6px;
+  }
+  .camera-tools-tip {
+    display: none;
   }
 }

@@ -28,6 +28,8 @@ export class MotoGPGame {
     this.renderer = null;
     this.circuit = null;
     this.cameraManager = null;
+    this.sunLight = null;
+    this.cameraDrag = null;
     this.audio = new AudioEngine();
 
     // Entities
@@ -64,11 +66,15 @@ export class MotoGPGame {
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.canvasContainer.appendChild(this.renderer.domElement);
 
     this.cameraManager = new CameraManager(this.camera);
+    this.initCameraPointerControls();
 
     window.addEventListener('resize', () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -77,15 +83,70 @@ export class MotoGPGame {
     });
   }
 
+  initCameraPointerControls() {
+    const canvas = this.renderer.domElement;
+    canvas.style.cursor = 'grab';
+
+    // Molette : éloigner/rapprocher la caméra en troisième personne.
+    canvas.addEventListener('wheel', (event) => {
+      if ((this.state !== 'RACING' && this.state !== 'COUNTDOWN') || this.cameraManager.isFirstPerson()) return;
+      event.preventDefault();
+      this.cameraManager.adjustDistance(event.deltaY > 0 ? 0.7 : -0.7);
+    }, { passive: false });
+
+    // Glisser horizontalement : déplacer le cadrage sur le côté de la moto.
+    canvas.addEventListener('pointerdown', (event) => {
+      if ((this.state !== 'RACING' && this.state !== 'COUNTDOWN') || event.button !== 0) return;
+      this.cameraDrag = { pointerId: event.pointerId, lastX: event.clientX };
+      canvas.setPointerCapture(event.pointerId);
+      canvas.style.cursor = 'grabbing';
+    });
+
+    canvas.addEventListener('pointermove', (event) => {
+      if (!this.cameraDrag || this.cameraDrag.pointerId !== event.pointerId || this.cameraManager.isFirstPerson()) return;
+      const deltaX = event.clientX - this.cameraDrag.lastX;
+      this.cameraDrag.lastX = event.clientX;
+      this.cameraManager.adjustLateral(deltaX * 0.025);
+    });
+
+    const endDrag = (event) => {
+      if (!this.cameraDrag || this.cameraDrag.pointerId !== event.pointerId) return;
+      this.cameraDrag = null;
+      canvas.style.cursor = 'grab';
+    };
+
+    canvas.addEventListener('pointerup', endDrag);
+    canvas.addEventListener('pointercancel', endDrag);
+    canvas.addEventListener('lostpointercapture', endDrag);
+  }
+
   initInputListeners() {
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
       this.audio.init();
       this.audio.resume();
 
-      if (e.code === 'KeyC' && this.state === 'RACING') {
-        const name = this.cameraManager.nextMode();
-        if (this.hud) this.hud.showAlert(`Caméra : ${name}`, 1500);
+      const canAdjustCamera = this.state === 'RACING' || this.state === 'COUNTDOWN';
+      if (canAdjustCamera && !e.repeat) {
+        if (e.code === 'KeyC') {
+          const name = this.cameraManager.nextMode();
+          if (this.hud) this.hud.showAlert(`Caméra : ${name}`, 1500);
+        } else if (e.code === 'KeyV') {
+          const name = this.cameraManager.togglePerspective();
+          if (this.hud) this.hud.showAlert(`Caméra : ${name}`, 1500);
+        } else if (e.code === 'PageUp') {
+          this.cameraManager.adjustDistance(0.8);
+          if (this.hud) this.hud.showAlert('Caméra reculée', 900);
+        } else if (e.code === 'PageDown') {
+          this.cameraManager.adjustDistance(-0.8);
+          if (this.hud) this.hud.showAlert('Caméra rapprochée', 900);
+        } else if (e.code === 'KeyJ') {
+          this.cameraManager.adjustLateral(-0.7);
+          if (this.hud) this.hud.showAlert('Caméra décalée à gauche', 900);
+        } else if (e.code === 'KeyL') {
+          this.cameraManager.adjustLateral(0.7);
+          if (this.hud) this.hud.showAlert('Caméra décalée à droite', 900);
+        }
       }
       if (e.code === 'KeyR' && this.state === 'RACING') {
         this.resetPlayerToTrack();
@@ -112,6 +173,26 @@ export class MotoGPGame {
     window.addEventListener('gamepaddisconnected', () => {
       this.gamepadIndex = null;
     });
+  }
+
+  setupCameraControls() {
+    const bindButton = (id, action, message) => {
+      const button = document.getElementById(id);
+      if (!button) return;
+      button.addEventListener('click', () => {
+        const result = action();
+        const alertMessage = typeof message === 'function' ? message(result) : message;
+        if (this.hud) this.hud.showAlert(alertMessage, 850);
+      });
+    };
+
+    bindButton('camera-view-toggle', () => this.cameraManager.togglePerspective(), 'Changement de perspective');
+    bindButton('camera-cycle', () => this.cameraManager.nextMode(), name => `Caméra : ${name}`);
+    bindButton('camera-reset', () => this.cameraManager.resetAdjustments(), 'Caméra recentrée');
+    bindButton('camera-shift-left', () => this.cameraManager.adjustLateral(-0.8), 'Caméra décalée à gauche');
+    bindButton('camera-shift-right', () => this.cameraManager.adjustLateral(0.8), 'Caméra décalée à droite');
+    bindButton('camera-recede', () => this.cameraManager.adjustDistance(0.9), 'Caméra reculée');
+    bindButton('camera-approach', () => this.cameraManager.adjustDistance(-0.9), 'Caméra rapprochée');
   }
 
   setupMobileControls() {
@@ -159,11 +240,20 @@ export class MotoGPGame {
 
     // 2. Build 3D Circuit
     this.circuit = new Circuit(trackDef, weatherDef);
+    this.circuit.group.traverse((object) => {
+      if (object.isMesh) object.receiveShadow = true;
+    });
     this.scene.add(this.circuit.group);
 
     // 3. Player Bike & Physics
     this.playerPhysics = new BikePhysics(playerTeam, this.circuit, true);
     this.playerModel = createMotoGPBike(playerTeam, true);
+    this.playerModel.root.traverse((object) => {
+      if (object.isMesh) {
+        object.castShadow = true;
+        object.receiveShadow = true;
+      }
+    });
     this.scene.add(this.playerModel.root);
 
     // Place Player in Pole Position (Slot 0)
@@ -194,6 +284,7 @@ export class MotoGPGame {
     const hudContainer = document.getElementById('hud-layer');
     this.hud = new MotoGP_HUD(hudContainer, this.circuit);
     this.setupMobileControls();
+    this.setupCameraControls();
 
     // 6. Start 5-Red-Lights Countdown
     this.state = 'COUNTDOWN';
@@ -217,14 +308,34 @@ export class MotoGPGame {
     const hemiLight = new THREE.HemisphereLight(weather.skyGradient[0], trackDef.groundColor, 0.9);
     this.scene.add(hemiLight);
 
-    // Main Sun Directional Light
-    const sunLight = new THREE.DirectionalLight(weather.sunColor, weather.sunIntensity);
-    sunLight.position.set(300, 450, 200);
-    this.scene.add(sunLight);
+    // Main directional light with a soft dynamic shadow centered on the player.
+    this.sunLight = new THREE.DirectionalLight(weather.sunColor, weather.sunIntensity);
+    this.sunLight.position.set(300, 450, 200);
+    this.sunLight.castShadow = true;
+    this.sunLight.shadow.mapSize.set(1536, 1536);
+    this.sunLight.shadow.camera.near = 1;
+    this.sunLight.shadow.camera.far = 850;
+    this.sunLight.shadow.camera.left = -145;
+    this.sunLight.shadow.camera.right = 145;
+    this.sunLight.shadow.camera.top = 145;
+    this.sunLight.shadow.camera.bottom = -145;
+    this.sunLight.shadow.bias = -0.00015;
+    this.sunLight.shadow.normalBias = 0.035;
+    this.sunLight.shadow.radius = 3;
+    this.sunLight.shadow.camera.updateProjectionMatrix();
+    this.scene.add(this.sunLight);
+    this.scene.add(this.sunLight.target);
 
     // Ambient light
     const ambLight = new THREE.AmbientLight(weather.ambientColor, 0.75);
     this.scene.add(ambLight);
+  }
+
+  updateShadowAnchor() {
+    if (!this.sunLight || !this.playerPhysics) return;
+    const pos = this.playerPhysics.pos;
+    this.sunLight.target.position.copy(pos);
+    this.sunLight.position.set(pos.x + 300, pos.y + 450, pos.z + 200);
   }
 
   getPlayerInputs() {
@@ -360,9 +471,11 @@ export class MotoGPGame {
 
       // 7. Update HUD
       if (this.hud) {
-        this.hud.update(telem, this.allRiders, this.totalLaps, this.cameraManager.getModeName());
+        this.hud.update(telem, this.allRiders, this.totalLaps, this.cameraManager.getModeName(), this.cameraManager);
       }
     }
+
+    this.updateShadowAnchor();
 
     // Update Camera
     this.cameraManager.update(dt, this.playerPhysics);

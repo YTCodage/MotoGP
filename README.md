@@ -18,6 +18,8 @@ Jeu de simulation et de course MotoGP en 3D jouable directement dans votre navig
   3. 🇪🇸 **Circuit Ricardo Tormo Valencia** (Amphithéâtre stadium)
 - **8 Écuries & Pilotes officiels** : Bagnaia (#63), Quartararo (#20), Marc Márquez (#93), Martín (#89), Binder (#33), Espargaró (#41), Bezzecchi (#72), Acosta (#31).
 - **Moteur Audio procédural** : Rugissement de moteur 4-temps V4 haute fidélité, détonations au passage des rapports (*quickshifter*), sifflement du vent et crissement de pneus.
+- **Rendu de course cinéma** : Éclairage ACES, textures calibrées en sRGB et ombres douces dynamiques sur la moto.
+- **Caméras pilotables** : Première et troisième personne, travelling latéral et réglage du recul par molette, glisser-déposer, touches ou commandes HUD.
 - **HUD & Télémétrie Broadcast** : Compteur digital, compte-tours avec shift-lights, angle d'inclinaison, tour de classement en temps réel et minimap 2D vectorielle.
 - **Multi-plateforme** : Compatible Clavier PC, Manettes de jeu (Xbox / PlayStation) et Écrans tactiles mobiles.
 
@@ -59,7 +61,8 @@ npm test
 | **Pencher G/D** | Q / A / ← ; D / → | Stick gauche | Boutons ◀ / ▶ |
 | **Frein arrière** | Espace | B / Rond | — |
 | **Boost KERS** | Shift (Maj) | A / Croix | Bouton BOOST |
-| **Caméra** | C | — | — |
+| **Caméra** | C : changer de vue ; V : 1re/3e personne | — | Bouton 1P/3P dans le HUD |
+| **Reculer / décaler la caméra** | Page ↑/↓ ; J / L | — | Molette, glisser l’image ou boutons du HUD |
 | **Replacer moto** | R | — | — |
 | **Pause** | P / Échap | — | — |
 | **Son On/Off** | M | — | — |

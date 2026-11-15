@@ -295,6 +295,8 @@ export class Circuit {
     }
 
     const texture = new THREE.CanvasTexture(canvas);
+
+    texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(1, 8);
@@ -325,6 +327,8 @@ export class Circuit {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const texture = new THREE.CanvasTexture(canvas);
+
+    texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(1, 12);
@@ -353,6 +357,8 @@ export class Circuit {
     }
 
     const texture = new THREE.CanvasTexture(canvas);
+
+    texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(4, 16);
@@ -522,7 +528,9 @@ export class Circuit {
         ctx.fillRect(x, y, size, size);
       }
     }
-    return new THREE.CanvasTexture(canvas);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
   }
 
   createSponsorBannerTexture(text) {
@@ -545,7 +553,11 @@ export class Circuit {
     ctx.textBaseline = 'middle';
     ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
-    return new THREE.CanvasTexture(canvas);
+    const texture = new THREE.CanvasTexture(canvas);
+
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    return texture;
   }
 
   buildGrandstands() {
@@ -620,6 +632,8 @@ export class Circuit {
         bCtx.fillText(dist.toString(), 64, 64);
 
         const tex = new THREE.CanvasTexture(boardCanvas);
+
+        tex.colorSpace = THREE.SRGBColorSpace;
         const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: tex }));
         mesh.position.copy(pt).addScaledVector(right, (this.roadWidth * 0.5 + 4.5)).add(new THREE.Vector3(0, 1.4, 0));
         mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent.clone().negate());

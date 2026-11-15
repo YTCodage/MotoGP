@@ -3,8 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
+import * as THREE from 'three';
 import * as constants from '../src/motogp/constants.js';
 import { BikePhysics } from '../src/motogp/physics.js';
+import { CameraManager } from '../src/motogp/camera.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -44,6 +46,11 @@ console.log('✓ Stylesheet et visuel de la page d’accueil validés');
 const gameSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'motogp', 'game.js'), 'utf8');
 assert(gameSource.includes("import { TEAMS, TRACK_DEFINITIONS, WEATHER_PRESETS, PHYSICS_CONFIG } from './constants.js';"),
   'PHYSICS_CONFIG doit être importée dans game.js pour le compte à rebours');
+
+const hudSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'motogp', 'hud.js'), 'utf8');
+for (const controlId of ['camera-tools', 'camera-view-toggle', 'camera-cycle', 'camera-reset', 'camera-recede', 'camera-shift-left']) {
+  assert(hudSource.includes(`id="${controlId}"`), `Contrôle caméra ${controlId} manquant`);
+}
 
 // 2. Test des constantes et écuries
 assert(Array.isArray(constants.TEAMS), 'TEAMS doit être un tableau');
@@ -98,7 +105,23 @@ assert.strictEqual(physicsCfg.gearRatios.length, 6, 'Boîte de vitesses à 6 rap
 assert(physicsCfg.gearRatios[5].maxKmh >= 350, '6e rapport > 350 km/h');
 console.log(`✓ Configuration physique MotoGP (Angle 64°, Boîte 6 rapports, Freinage carbone) validée`);
 
-// 6. Test dynamique de simulation physique (accélération, freinage, virage)
+// 6. Test des vues et réglages caméra
+const cameraManager = new CameraManager(new THREE.PerspectiveCamera(64, 1, 0.1, 1000));
+assert.strictEqual(cameraManager.isFirstPerson(), false);
+cameraManager.togglePerspective();
+assert.strictEqual(cameraManager.isFirstPerson(), true, 'V doit activer la première personne');
+cameraManager.togglePerspective();
+assert.strictEqual(cameraManager.isFirstPerson(), false, 'V doit revenir en troisième personne');
+assert.match(cameraManager.nextMode(), /Action/);
+assert.match(cameraManager.nextMode(), /latéral/);
+assert.strictEqual(cameraManager.adjustDistance(100), 14, 'La caméra doit avoir une limite de recul');
+assert.strictEqual(cameraManager.adjustDistance(-100), -2, 'La caméra doit avoir une limite de rapprochement');
+assert.strictEqual(cameraManager.adjustLateral(100), 8, 'Le décalage caméra doit être borné à droite');
+assert.strictEqual(cameraManager.adjustLateral(-100), -8, 'Le décalage caméra doit être borné à gauche');
+cameraManager.resetAdjustments();
+console.log('✓ Caméras 1re/3e personne, travelling latéral et recul validés');
+
+// 7. Test dynamique de simulation physique (accélération, freinage, virage)
 const mockCircuit = {
   totalLength: 4200,
   roadWidth: 14,

@@ -76,7 +76,25 @@ export class MotoGP_HUD {
       <!-- BOTTOM LEFT: MINIMAP & CAMERA -->
       <div id="hud-bottom-left">
         <canvas id="minimap-canvas" width="160" height="160"></canvas>
-        <div id="camera-badge">VUE : POURSUITE (C)</div>
+        <div id="camera-badge">3e personne — Poursuite (C)</div>
+        <div id="camera-tools" aria-label="Réglages de la caméra">
+          <div class="camera-tools-heading">
+            <span class="camera-tools-title"><i></i> CAMÉRA</span>
+            <div class="camera-tools-modes">
+              <button id="camera-view-toggle" type="button" title="Basculer entre première et troisième personne">VUE 1P / 3P</button>
+              <button id="camera-cycle" type="button" title="Changer de caméra (C)">C</button>
+              <button id="camera-reset" type="button" aria-label="Recentrer la caméra" title="Recentrer la caméra">↺</button>
+            </div>
+          </div>
+          <div class="camera-tools-adjust">
+            <button id="camera-shift-left" type="button" aria-label="Décaler la caméra à gauche" title="Décaler à gauche (J)">◀</button>
+            <button id="camera-recede" type="button" aria-label="Reculer la caméra" title="Reculer la caméra">−</button>
+            <span>ANGLE</span>
+            <button id="camera-approach" type="button" aria-label="Rapprocher la caméra" title="Rapprocher la caméra">＋</button>
+            <button id="camera-shift-right" type="button" aria-label="Décaler la caméra à droite" title="Décaler à droite (L)">▶</button>
+          </div>
+          <div class="camera-tools-tip">MOLETTE : RECUL · GLISSER : DÉCALER</div>
+        </div>
       </div>
 
       <!-- MOBILE CONTROLS OVERLAY -->
@@ -132,7 +150,7 @@ export class MotoGP_HUD {
     this.minRange = { minX, minZ, maxRange, padding, size };
   }
 
-  update(telemetry, ridersList = [], maxLaps = 3, cameraName = '') {
+  update(telemetry, ridersList = [], maxLaps = 3, cameraName = '', cameraManager = null) {
     // 1. Dash speed & gear
     const speedEl = document.getElementById('dash-speed');
     const gearEl = document.getElementById('dash-gear');
@@ -190,10 +208,20 @@ export class MotoGP_HUD {
       bestTimeEl.textContent = `MEILLEUR : ${this.formatTime(telemetry.bestLapTime)}`;
     }
 
-    // 5. Camera Badge
+    // 5. Camera mode and perspective controls
     if (cameraName) {
       const camBadge = document.getElementById('camera-badge');
       if (camBadge) camBadge.textContent = `${cameraName} (C)`;
+    }
+    const isFirstPerson = cameraManager ? cameraManager.isFirstPerson() : false;
+    const viewToggle = document.getElementById('camera-view-toggle');
+    if (viewToggle) {
+      viewToggle.textContent = isFirstPerson ? '1re PERS.' : '3e PERS.';
+      viewToggle.setAttribute('aria-label', isFirstPerson ? 'Passer en troisième personne' : 'Passer en première personne');
+    }
+    for (const id of ['camera-shift-left', 'camera-shift-right', 'camera-recede', 'camera-approach']) {
+      const button = document.getElementById(id);
+      if (button) button.disabled = isFirstPerson;
     }
 
     // 6. Timing Tower

@@ -565,6 +565,8 @@ function createNumberTexture(num, textColorHex, bgHex) {
   ctx.fillText(num.toString(), canvas.width / 2, canvas.height / 2);
 
   const texture = new THREE.CanvasTexture(canvas);
+
+  texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
   return texture;
 }
