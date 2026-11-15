@@ -1,6 +1,7 @@
 {
   "name": "motogp-3d",
   "version": "1.0.0",
+  "type": "module",
   "description": "Jeu de course de simulation MotoGP 3D dans le navigateur avec Three.js et Web Audio API",
   "main": "index.html",
   "scripts": {

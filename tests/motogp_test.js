@@ -1,7 +1,12 @@
 // Tests automatisés de validation du jeu MotoGP 3D
-const fs = require('fs');
-const path = require('path');
-const assert = require('assert');
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
+import * as constants from '../src/motogp/constants.js';
+import { BikePhysics } from '../src/motogp/physics.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 console.log('=== DÉBUT DES TESTS MOTOGP 3D ===');
 
@@ -12,26 +17,35 @@ const bundleStat = fs.statSync(bundlePath);
 assert(bundleStat.size > 200000, `Taille du bundle trop petite : ${bundleStat.size} octets`);
 console.log(`✓ Bundle vérifié : ${(bundleStat.size / 1024).toFixed(1)} Ko`);
 
-const htmlPath = path.join(__dirname, '..', 'motogp.html');
-assert(fs.existsSync(htmlPath), 'motogp.html doit exister');
+const htmlPath = path.join(__dirname, '..', 'index.html');
+assert(fs.existsSync(htmlPath), 'index.html doit exister');
 const htmlContent = fs.readFileSync(htmlPath, 'utf8');
-assert(htmlContent.includes('id="canvas-container"'), 'Canvas 3D manquant dans motogp.html');
-assert(htmlContent.includes('id="main-menu"'), 'Menu principal manquant dans motogp.html');
-assert(htmlContent.includes('id="hud-layer"'), 'Couche HUD manquante dans motogp.html');
-assert(htmlContent.includes('id="pause-modal"'), 'Modal de pause manquante dans motogp.html');
-assert(htmlContent.includes('id="results-modal"'), 'Modal de résultats manquante dans motogp.html');
+assert(htmlContent.includes('id="home-screen"'), 'Page d’accueil de présentation manquante');
+assert(htmlContent.includes('id="btn-home-launch"'), 'Bouton de lancement rapide manquant');
+assert(htmlContent.includes('id="btn-home-setup"'), 'Bouton de personnalisation manquant');
+assert(htmlContent.includes('id="canvas-container"'), 'Canvas 3D manquant dans index.html');
+assert(htmlContent.includes('id="main-menu"'), 'Menu principal manquant dans index.html');
+assert(htmlContent.includes('id="hud-layer"'), 'Couche HUD manquante dans index.html');
+assert(htmlContent.includes('id="pause-modal"'), 'Modal de pause manquante dans index.html');
+assert(htmlContent.includes('id="results-modal"'), 'Modal de résultats manquante dans index.html');
 assert(htmlContent.includes('assets/motogp.bundle.js'), 'Script bundle non lié');
-console.log('✓ Page motogp.html validée (Canvas, HUD, Menus, Modals)');
+console.log('✓ Page index.html validée (Accueil, Canvas, HUD, Menus, Modals)');
 
 const cssPath = path.join(__dirname, '..', 'assets', 'motogp.css');
 assert(fs.existsSync(cssPath), 'assets/motogp.css doit exister');
 const cssContent = fs.readFileSync(cssPath, 'utf8');
 assert(cssContent.includes('--mgp-red'), 'Variables CSS MotoGP manquantes');
 assert(cssContent.includes('#hud-dashboard'), 'Dashboard CSS manquant');
-console.log('✓ Stylesheet assets/motogp.css validée');
+assert(cssContent.includes('.home-screen'), 'Styles de la page d’accueil manquants');
+const homeImagePath = path.join(__dirname, '..', 'assets', 'home-hero.jpg');
+assert(fs.existsSync(homeImagePath), 'Image de la page d’accueil manquante');
+console.log('✓ Stylesheet et visuel de la page d’accueil validés');
+
+const gameSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'motogp', 'game.js'), 'utf8');
+assert(gameSource.includes("import { TEAMS, TRACK_DEFINITIONS, WEATHER_PRESETS, PHYSICS_CONFIG } from './constants.js';"),
+  'PHYSICS_CONFIG doit être importée dans game.js pour le compte à rebours');
 
 // 2. Test des constantes et écuries
-const constants = require('../src/motogp/constants.js');
 assert(Array.isArray(constants.TEAMS), 'TEAMS doit être un tableau');
 assert(constants.TEAMS.length >= 6, `Nombre d'écuries insuffisant : ${constants.TEAMS.length}`);
 
@@ -104,7 +118,6 @@ const mockCircuit = {
   })
 };
 
-const { BikePhysics } = require('../src/motogp/physics.js');
 const bike = new BikePhysics(bagnaia, mockCircuit, true);
 assert.strictEqual(bike.speedKmh, 0);
 assert.strictEqual(bike.gear, 1);

@@ -36,7 +36,14 @@ npx serve .
 ```
 Puis accédez à `http://localhost:8000`.
 
-### 3. Recompiler le projet
+À l’ouverture, une page de présentation propose une **course rapide** (Le Mans, Bagnaia #63, 3 tours) ou l’accès au menu pour choisir le circuit, le pilote, la météo, le mode et la difficulté.
+
+### 3. Publier sur GitHub Pages
+Le workflow `.github/workflows/deploy-pages.yml` construit le bundle, lance les tests et publie le site à chaque mise à jour de `main` ou de la branche de travail configurée. Dans **Settings → Pages**, choisir **GitHub Actions** comme source de publication.
+
+Pour ce dépôt, l’adresse attendue est : `https://ytcodage.github.io/MotoGP/`.
+
+### 4. Recompiler et tester le projet
 ```bash
 npm install
 npm run build
@@ -49,10 +56,12 @@ npm test
 | :--- | :--- | :--- | :--- |
 | **Accélérer** | Z / W / ↑ | RT / R2 | Bouton GAZ |
 | **Frein avant** | S / ↓ | LT / L2 | Bouton FREIN |
-| **Pencher G/D** | Q / D ou ← / → | Stick gauche | Boutons ◀ / ▶ |
+| **Pencher G/D** | Q / A / ← ; D / → | Stick gauche | Boutons ◀ / ▶ |
 | **Frein arrière** | Espace | B / Rond | — |
 | **Boost KERS** | Shift (Maj) | A / Croix | Bouton BOOST |
-| **Caméra** | C | Y / Triangle | — |
+| **Caméra** | C | — | — |
 | **Replacer moto** | R | — | — |
-| **Pause** | P / Échap | Start | — |
+| **Pause** | P / Échap | — | — |
 | **Son On/Off** | M | — | — |
+
+Sur manette, les gâchettes, le stick gauche, A/Croix (boost) et B/Rond (frein arrière) sont pris en charge. Pour la caméra, la pause et le repositionnement, utilise le clavier.

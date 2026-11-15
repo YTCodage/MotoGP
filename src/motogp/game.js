@@ -1,6 +1,6 @@
 // Gestionnaire principal de partie MotoGP 3D (Machine d'état, boucle de jeu et événements)
 import * as THREE from 'three';
-import { TEAMS, TRACK_DEFINITIONS, WEATHER_PRESETS } from './constants.js';
+import { TEAMS, TRACK_DEFINITIONS, WEATHER_PRESETS, PHYSICS_CONFIG } from './constants.js';
 import { Circuit } from './track.js';
 import { createMotoGPBike } from './models.js';
 import { BikePhysics } from './physics.js';

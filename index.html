@@ -15,8 +15,51 @@
 
   <!-- Interface Utilisateur Overlay -->
   <div id="ui-container">
-    <!-- MENU PRINCIPAL -->
-    <div id="main-menu">
+    <!-- PAGE D'ACCUEIL / PRÉSENTATION -->
+    <section id="home-screen" class="home-screen" aria-labelledby="home-title">
+      <header class="home-topbar">
+        <div class="home-brand" aria-label="MotoGP 3D — Grand Prix Championship">
+          <span class="home-brand-badge">MOTO<span>GP</span><small>3D</small></span>
+          <span class="home-brand-caption">GRAND PRIX<br>CHAMPIONSHIP</span>
+        </div>
+        <div class="home-top-meta"><span class="home-status-dot"></span> SIMULATION 3D <span class="home-meta-divider">/</span> WEBGL</div>
+      </header>
+
+      <main class="home-hero">
+        <div class="home-kicker"><span>01</span><span class="home-kicker-line"></span> COURSE · 1000 CC</div>
+        <h1 id="home-title">LE GRAND PRIX<br>COMMENCE <span>ICI.</span></h1>
+        <p class="home-description">Prends le guidon, choisis ta trajectoire et fonce vers le drapeau à damier. Trois circuits, huit pilotes et des courses à pleine vitesse — directement dans ton navigateur.</p>
+
+        <div class="home-actions">
+          <button id="btn-home-launch" class="home-launch-button" type="button">
+            <span class="home-launch-icon" aria-hidden="true">▶</span>
+            <span>LANCER LE JEU</span>
+            <span class="home-launch-arrow" aria-hidden="true">↗</span>
+          </button>
+          <button id="btn-home-setup" class="home-setup-button" type="button">PERSONNALISER MA COURSE <span aria-hidden="true">＋</span></button>
+        </div>
+        <p class="home-quick-race-note">Course rapide · Le Mans · Bagnaia #63 · 3 tours</p>
+
+        <div class="home-control-hint" aria-label="Commandes rapides">
+          <span><kbd>Z</kbd> GAZ</span>
+          <span><kbd>Q</kbd><kbd>D</kbd> PILOTER</span>
+          <span><kbd>SHIFT</kbd> BOOST</span>
+        </div>
+      </main>
+
+      <footer class="home-footer">
+        <div class="home-stats" aria-label="Contenu du jeu">
+          <div class="home-stat"><strong>03</strong><span>CIRCUITS</span></div>
+          <div class="home-stat"><strong>08</strong><span>PILOTES</span></div>
+          <div class="home-stat"><strong>355</strong><span>KM/H</span></div>
+          <div class="home-stat"><strong>03</strong><span>MODES DE JEU</span></div>
+        </div>
+        <div class="home-footer-note"><span class="home-footer-line"></span> LA PROCHAINE LIGNE DROITE EST À TOI</div>
+      </footer>
+    </section>
+
+    <!-- MENU DE CONFIGURATION -->
+    <div id="main-menu" style="display: none;">
       <div class="menu-header">
         <div class="brand-group">
           <div class="brand-badge">MOTOGP™ 3D</div>

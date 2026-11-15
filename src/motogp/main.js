@@ -15,8 +15,50 @@ window.addEventListener('DOMContentLoaded', () => {
   let selectedDifficulty = 'pro';
   let selectedLaps = 3;
 
-  // Initialize Menu DOM
+  // Initialize menu and presentation screen
   initMenuUI();
+  initHomeScreen();
+
+  function getSelectedRaceConfig() {
+    return {
+      mode: selectedMode,
+      trackId: selectedTrackId,
+      teamId: selectedTeamId,
+      weatherId: selectedWeatherId,
+      difficulty: selectedDifficulty,
+      laps: selectedLaps
+    };
+  }
+
+  function launchRace() {
+    game.audio.init();
+    game.audio.resume();
+    game.audio.playButtonClick();
+
+    document.getElementById('home-screen').style.display = 'none';
+    document.getElementById('main-menu').style.display = 'none';
+    document.getElementById('hud-layer').style.display = 'block';
+    game.startRace(getSelectedRaceConfig());
+  }
+
+  function initHomeScreen() {
+    const launchButton = document.getElementById('btn-home-launch');
+    const setupButton = document.getElementById('btn-home-setup');
+
+    if (launchButton) {
+      launchButton.addEventListener('click', launchRace);
+    }
+
+    if (setupButton) {
+      setupButton.addEventListener('click', () => {
+        game.audio.init();
+        game.audio.resume();
+        game.audio.playButtonClick();
+        document.getElementById('home-screen').style.display = 'none';
+        document.getElementById('main-menu').style.display = 'flex';
+      });
+    }
+  }
 
   function initMenuUI() {
     // 1. Populate Tracks
@@ -136,26 +178,10 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    // 7. Start Race Button
+    // 7. Start the selected race
     const btnLaunch = document.getElementById('btn-launch-race');
     if (btnLaunch) {
-      btnLaunch.addEventListener('click', () => {
-        game.audio.init();
-        game.audio.resume();
-        game.audio.playButtonClick();
-
-        document.getElementById('main-menu').style.display = 'none';
-        document.getElementById('hud-layer').style.display = 'block';
-
-        game.startRace({
-          mode: selectedMode,
-          trackId: selectedTrackId,
-          teamId: selectedTeamId,
-          weatherId: selectedWeatherId,
-          difficulty: selectedDifficulty,
-          laps: selectedLaps
-        });
-      });
+      btnLaunch.addEventListener('click', launchRace);
     }
 
     // Pause Modal Buttons
