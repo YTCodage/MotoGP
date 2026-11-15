@@ -41,9 +41,11 @@ Puis accédez à `http://localhost:8000`.
 À l’ouverture, une page de présentation propose une **course rapide** (Le Mans, Bagnaia #63, 3 tours) ou l’accès au menu pour choisir le circuit, le pilote, la météo, le mode et la difficulté.
 
 ### 3. Publier sur GitHub Pages
-Le workflow `.github/workflows/deploy-pages.yml` construit le bundle, lance les tests et publie le site à chaque mise à jour de `main` ou de la branche de travail configurée. Dans **Settings → Pages**, choisir **GitHub Actions** comme source de publication.
+GitHub Pages publie automatiquement la branche et le dossier sélectionnés dans **Settings → Pages → Build and deployment**. La configuration actuelle sert la racine de la branche active ; chaque push sur cette branche déclenche une nouvelle publication. Après fusion du travail dans `main`, tu peux sélectionner `main` comme branche de publication si tu veux y déplacer le site.
 
-Pour ce dépôt, l’adresse attendue est : `https://ytcodage.github.io/MotoGP/`.
+Le workflow `.github/workflows/ci.yml` vérifie séparément la compilation et les tests.
+
+Pour ce dépôt, l’adresse est : `https://ytcodage.github.io/MotoGP/`.
 
 ### 4. Recompiler et tester le projet
 ```bash
