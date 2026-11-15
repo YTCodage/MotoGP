@@ -1,4 +1,4 @@
-// Caméras MotoGP : poursuite, travelling latéral et vues embarquées.
+// Caméras MotoGP : vues stables en poursuite, de côté et embarquées.
 import * as THREE from 'three';
 
 const THIRD_PERSON_MODES = new Set(['chase', 'action', 'side']);
@@ -15,27 +15,30 @@ export class CameraManager {
     this.smoothLook = new THREE.Vector3();
     this.baseFov = 64;
     this.camera.fov = this.baseFov;
+    this.camera.up.set(0, 1, 0);
     this.camera.updateProjectionMatrix();
 
-    // Réglages de caméra conservés lors des changements de vue.
-    this.distanceOffset = 0; // valeur positive = caméra plus éloignée
-    this.lateralOffset = 0; // valeur positive = caméra décalée à droite
+    this.distanceOffset = 0; // Valeur positive = caméra plus éloignée.
+    this.lateralOffset = 0; // Valeur positive = caméra décalée à droite.
     this.heightOffset = 0;
-    this.shake = 0;
+    this.currentRoll = 0;
+    this.poseInitialized = false;
   }
 
   setMode(mode) {
     const index = this.modes.indexOf(mode);
     if (index < 0) return this.getModeName();
-    this.modeIndex = index;
-    this.currentMode = mode;
+    if (this.currentMode !== mode) {
+      this.modeIndex = index;
+      this.currentMode = mode;
+      this.poseInitialized = false;
+      this.currentRoll = 0;
+    }
     return this.getModeName();
   }
 
   nextMode() {
-    this.modeIndex = (this.modeIndex + 1) % this.modes.length;
-    this.currentMode = this.modes[this.modeIndex];
-    return this.getModeName();
+    return this.setMode(this.modes[(this.modeIndex + 1) % this.modes.length]);
   }
 
   isFirstPerson() {
@@ -44,6 +47,20 @@ export class CameraManager {
 
   togglePerspective() {
     return this.setMode(this.isFirstPerson() ? 'chase' : 'helmet');
+  }
+
+  resetForRace() {
+    this.modeIndex = 0;
+    this.currentMode = 'chase';
+    this.resetAdjustments();
+    this.smoothPos.set(0, 0, 0);
+    this.smoothLook.set(0, 0, 0);
+    this.currentRoll = 0;
+    this.poseInitialized = false;
+    this.camera.up.set(0, 1, 0);
+    this.camera.rotation.set(0, 0, 0);
+    this.camera.fov = this.baseFov;
+    this.camera.updateProjectionMatrix();
   }
 
   adjustDistance(amount) {
@@ -78,87 +95,96 @@ export class CameraManager {
     }
   }
 
+  aimAt(target, lean, bankFactor, dt) {
+    this.camera.up.set(0, 1, 0);
+    this.camera.lookAt(target);
+
+    const targetRoll = -lean * bankFactor;
+    if (!this.poseInitialized) {
+      this.currentRoll = targetRoll;
+    } else {
+      const bankSmoothing = 1 - Math.exp(-dt * 8);
+      this.currentRoll += (targetRoll - this.currentRoll) * bankSmoothing;
+    }
+
+    // Bank around the camera's viewing axis, without accumulating roll frame-to-frame.
+    if (Math.abs(this.currentRoll) > 0.0001) {
+      const viewAxis = new THREE.Vector3().subVectors(target, this.camera.position).normalize();
+      const bank = new THREE.Quaternion().setFromAxisAngle(viewAxis, this.currentRoll);
+      this.camera.quaternion.premultiply(bank);
+    }
+    this.poseInitialized = true;
+  }
+
   update(dt, playerPhys) {
     if (!playerPhys) return;
+    dt = Math.max(0, dt);
 
     const pos = playerPhys.pos;
     const yaw = playerPhys.yaw;
     const lean = playerPhys.leanAngle;
     const speed = playerPhys.speedKmh;
-
     const fwd = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
     const up = new THREE.Vector3(0, 1, 0);
     const right = new THREE.Vector3().crossVectors(up, fwd).normalize();
 
-    // Sensation de vitesse cinéma : légère ouverture du champ de vision.
-    const fovTarget = this.baseFov + Math.min(22, (speed / 350) * 22);
-    this.camera.fov += (fovTarget - this.camera.fov) * Math.min(1, dt * 5);
+    // A restrained FOV change gives speed feedback without making the camera feel loose.
+    const fovTarget = this.baseFov + Math.min(8, (speed / 350) * 8);
+    this.camera.fov += (fovTarget - this.camera.fov) * (1 - Math.exp(-dt * 5));
     this.camera.updateProjectionMatrix();
-
-    // Vibrations subtiles à haute vitesse.
-    if (speed > 160) {
-      const shakeAmt = ((speed - 160) / 200) * 0.025;
-      this.shake = (Math.random() - 0.5) * shakeAmt;
-    } else {
-      this.shake = 0;
-    }
 
     if (THIRD_PERSON_MODES.has(this.currentMode)) {
       const presets = {
-        chase: { distance: 7.2, height: 2.7, side: 0, lookAhead: 5.5, lookHeight: 0.9, smoothing: 6, roll: 0.12 },
-        action: { distance: 4.5, height: 1.55, side: 0, lookAhead: 8, lookHeight: 0.7, smoothing: 8, roll: 0.2 },
-        side: { distance: 7.6, height: 2.8, side: 5.5, lookAhead: 3.5, lookHeight: 1.05, smoothing: 5, roll: 0.08 }
+        chase: { distance: 7.2, height: 2.7, side: 0, lookAhead: 5.5, lookHeight: 0.9, smoothing: 6, bank: 0.28 },
+        action: { distance: 4.5, height: 1.55, side: 0, lookAhead: 8, lookHeight: 0.7, smoothing: 8, bank: 0.36 },
+        side: { distance: 7.6, height: 2.8, side: 5.5, lookAhead: 3.5, lookHeight: 1.05, smoothing: 5, bank: 0.16 }
       };
       const preset = presets[this.currentMode];
-      const speedPullback = Math.min(1.8, (speed / 350) * 1.8);
-      const distance = Math.max(2.8, preset.distance + this.distanceOffset + speedPullback);
+      const distance = Math.max(2.8, preset.distance + this.distanceOffset);
       const cameraHeight = Math.max(0.7, preset.height + this.heightOffset);
-
       const targetPos = pos.clone()
         .addScaledVector(fwd, -distance)
-        .addScaledVector(right, preset.side + this.lateralOffset + lean * 0.25)
+        .addScaledVector(right, preset.side + this.lateralOffset)
         .add(new THREE.Vector3(0, cameraHeight, 0));
       const lookTarget = pos.clone()
         .addScaledVector(fwd, preset.lookAhead)
         .add(new THREE.Vector3(0, preset.lookHeight, 0));
 
-      const follow = 1 - Math.exp(-dt * preset.smoothing);
-      this.smoothPos.lerp(targetPos, follow);
-      this.smoothLook.lerp(lookTarget, 1 - Math.exp(-dt * (preset.smoothing + 2)));
+      if (!this.poseInitialized) {
+        // Start exactly behind the bike instead of sweeping in from the world origin.
+        this.smoothPos.copy(targetPos);
+        this.smoothLook.copy(lookTarget);
+      } else {
+        this.smoothPos.lerp(targetPos, 1 - Math.exp(-dt * preset.smoothing));
+        this.smoothLook.lerp(lookTarget, 1 - Math.exp(-dt * (preset.smoothing + 2)));
+      }
 
-      this.camera.position.copy(this.smoothPos).add(new THREE.Vector3(0, this.shake, 0));
-      this.camera.lookAt(this.smoothLook);
-      this.camera.rotation.z = -lean * preset.roll;
+      this.camera.position.copy(this.smoothPos);
+      this.aimAt(this.smoothLook, lean, preset.bank, dt);
       return;
     }
 
     if (this.currentMode === 'helmet') {
-      // Vue à hauteur du casque, alignée sur le regard du pilote.
       const helmetPos = pos.clone()
         .addScaledVector(fwd, 0.38)
         .add(new THREE.Vector3(0, 1.34, 0));
       const lookTarget = pos.clone()
         .addScaledVector(fwd, 22)
         .add(new THREE.Vector3(0, 1.18, 0));
-
-      this.camera.position.copy(helmetPos).add(new THREE.Vector3(0, this.shake * 0.8, 0));
-      this.camera.lookAt(lookTarget);
-      this.camera.rotation.z = -lean * 0.48;
+      this.camera.position.copy(helmetPos);
+      this.aimAt(lookTarget, lean, 0.52, dt);
       return;
     }
 
     if (this.currentMode === 'gyro') {
-      // Caméra embarquée au-dessus de la selle, horizon stabilisé.
       const tailPos = pos.clone()
         .addScaledVector(fwd, -1.25)
         .add(new THREE.Vector3(0, 1.42, 0));
       const lookTarget = pos.clone()
         .addScaledVector(fwd, 18)
         .add(new THREE.Vector3(0, 0.95, 0));
-
-      this.camera.position.copy(tailPos).add(new THREE.Vector3(0, this.shake, 0));
-      this.camera.lookAt(lookTarget);
-      this.camera.rotation.z = 0;
+      this.camera.position.copy(tailPos);
+      this.aimAt(lookTarget, lean, 0, dt);
     }
   }
 }

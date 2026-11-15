@@ -123,6 +123,13 @@ export class MotoGPGame {
   initInputListeners() {
     window.addEventListener('keydown', (e) => {
       this.keys[e.code] = true;
+      if (typeof e.key === 'string' && e.key.length === 1) {
+        this.keys[e.key.toLowerCase()] = true;
+      }
+      if ((this.state === 'RACING' || this.state === 'COUNTDOWN') &&
+          ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        e.preventDefault();
+      }
       this.audio.init();
       this.audio.resume();
 
@@ -162,6 +169,15 @@ export class MotoGPGame {
 
     window.addEventListener('keyup', (e) => {
       this.keys[e.code] = false;
+      if (typeof e.key === 'string' && e.key.length === 1) {
+        this.keys[e.key.toLowerCase()] = false;
+      }
+    });
+
+    // Avoid stuck throttle/steering when focus leaves the game window.
+    window.addEventListener('blur', () => {
+      this.keys = {};
+      this.touchInputs = { throttle: 0, brake: 0, steer: 0, rearBrake: 0, nitro: false };
     });
 
     // Gamepad API
@@ -225,6 +241,7 @@ export class MotoGPGame {
     this.selectedWeatherId = config.weatherId || this.selectedWeatherId;
     this.aiDifficulty = config.difficulty || this.aiDifficulty;
     this.totalLaps = config.laps || 3;
+    this.cameraManager.resetForRace();
 
     // Reset scene
     while (this.scene.children.length > 0) {
@@ -345,11 +362,11 @@ export class MotoGPGame {
     let rearBrake = 0;
     let nitro = false;
 
-    // Keyboard (ZQSD / WASD / Arrows)
-    if (this.keys['KeyW'] || this.keys['KeyZ'] || this.keys['ArrowUp']) throttle = 1.0;
-    if (this.keys['KeyS'] || this.keys['ArrowDown']) brake = 1.0;
-    if (this.keys['KeyA'] || this.keys['KeyQ'] || this.keys['ArrowLeft']) steer -= 1.0;
-    if (this.keys['KeyD'] || this.keys['ArrowRight']) steer += 1.0;
+    // Keyboard: physical key codes plus typed letters for AZERTY/QWERTY layouts.
+    if (this.keys['KeyW'] || this.keys['KeyZ'] || this.keys.w || this.keys.z || this.keys['ArrowUp']) throttle = 1.0;
+    if (this.keys['KeyS'] || this.keys.s || this.keys['ArrowDown']) brake = 1.0;
+    if (this.keys['KeyA'] || this.keys['KeyQ'] || this.keys.a || this.keys.q || this.keys['ArrowLeft']) steer -= 1.0;
+    if (this.keys['KeyD'] || this.keys.d || this.keys['ArrowRight']) steer += 1.0;
     if (this.keys['Space']) rearBrake = 1.0;
     if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) nitro = true;
 

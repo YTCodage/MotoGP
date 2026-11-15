@@ -190,7 +190,7 @@ export class BikePhysics {
     // 6. LEAN ANGLE & STEERING DYNAMICS
     // Lean sensitivity decreases naturally at extreme speeds (gyroscopic stability)
     const gyroStabilization = Math.max(0.55, 1.0 - (this.speedKmh / 420));
-    const targetLean = -steer * (PHYSICS_CONFIG.maxLeanAngleDeg * Math.PI / 180) * this.handlingFactor * gyroStabilization;
+    const targetLean = steer * (PHYSICS_CONFIG.maxLeanAngleDeg * Math.PI / 180) * this.handlingFactor * gyroStabilization;
 
     // Roll rate
     const rollSpeed = (PHYSICS_CONFIG.leanSpeedDegPerSec * Math.PI / 180) * this.handlingFactor;
@@ -202,16 +202,16 @@ export class BikePhysics {
     const maxLeanRad = PHYSICS_CONFIG.maxLeanAngleDeg * Math.PI / 180;
     this.leanAngle = Math.max(-maxLeanRad, Math.min(maxLeanRad, this.leanAngle));
 
-    this.steerAngle = -steer * 0.25;
+    this.steerAngle = steer * 0.25;
 
-    // Turning rate: yaw change based on lean angle and forward velocity
-    // tan(lean) = v * w / g  =>  w = g * tan(lean) / v
+    // Positive lean and positive yaw both represent a right turn.
+    // tan(lean) = v * yawRate / g  =>  yawRate = g * tan(lean) / v
     if (this.speedKmh > 5.0) {
       const g = 9.81;
-      const turnRate = -(g * Math.tan(this.leanAngle) / Math.max(2.5, newSpeedMps)) * grip;
+      const turnRate = (g * Math.tan(this.leanAngle) / Math.max(2.5, newSpeedMps)) * grip;
       this.yaw += turnRate * dt;
     } else if (steer !== 0 && this.speedKmh > 0.5) {
-      this.yaw += -steer * 0.8 * dt;
+      this.yaw += steer * 0.8 * dt;
     }
 
     // 7. POSITION UPDATE

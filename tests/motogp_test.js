@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import * as constants from '../src/motogp/constants.js';
 import { BikePhysics } from '../src/motogp/physics.js';
 import { CameraManager } from '../src/motogp/camera.js';
+import { MotoGPGame } from '../src/motogp/game.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -119,7 +120,38 @@ assert.strictEqual(cameraManager.adjustDistance(-100), -2, 'La caméra doit avoi
 assert.strictEqual(cameraManager.adjustLateral(100), 8, 'Le décalage caméra doit être borné à droite');
 assert.strictEqual(cameraManager.adjustLateral(-100), -8, 'Le décalage caméra doit être borné à gauche');
 cameraManager.resetAdjustments();
-console.log('✓ Caméras 1re/3e personne, travelling latéral et recul validés');
+cameraManager.setMode('side');
+cameraManager.adjustDistance(3);
+cameraManager.resetForRace();
+assert.strictEqual(cameraManager.currentMode, 'chase', 'Une course doit démarrer en poursuite droite');
+assert.strictEqual(cameraManager.distanceOffset, 0, 'Le zoom précédent ne doit pas contaminer le départ suivant');
+
+const stableCamera = new THREE.PerspectiveCamera(64, 1, 0.1, 1000);
+const stableManager = new CameraManager(stableCamera);
+const straightBikePose = { pos: new THREE.Vector3(10, 1, 20), yaw: Math.PI / 2, leanAngle: 0, speedKmh: 0 };
+stableManager.update(1 / 60, straightBikePose);
+const openingPosition = stableCamera.position.clone();
+const openingRotation = stableCamera.quaternion.clone();
+stableManager.update(1 / 60, straightBikePose);
+assert(stableCamera.position.distanceTo(openingPosition) < 0.001, 'La caméra doit être stable au départ');
+assert(stableCamera.quaternion.angleTo(openingRotation) < 0.001, 'La caméra doit s’ouvrir droite, sans roulis');
+stableManager.update(1 / 60, { ...straightBikePose, leanAngle: 0.5 });
+assert(stableCamera.quaternion.angleTo(openingRotation) > 0.001, 'La caméra doit suivre l’inclinaison de la moto');
+console.log('✓ Caméras 1re/3e personne, recul, départ droit et inclinaison validés');
+
+// Check keyboard mappings independently of a browser/WebGL renderer.
+const keyboardInputProbe = Object.create(MotoGPGame.prototype);
+keyboardInputProbe.touchInputs = { throttle: 0, brake: 0, steer: 0, rearBrake: 0, nitro: false };
+keyboardInputProbe.gamepadIndex = null;
+keyboardInputProbe.keys = { q: true };
+assert.strictEqual(keyboardInputProbe.getPlayerInputs().steer, -1, 'Q AZERTY doit braquer à gauche');
+keyboardInputProbe.keys = { d: true };
+assert.strictEqual(keyboardInputProbe.getPlayerInputs().steer, 1, 'D AZERTY doit braquer à droite');
+keyboardInputProbe.keys = { ArrowLeft: true };
+assert.strictEqual(keyboardInputProbe.getPlayerInputs().steer, -1, 'La flèche gauche doit braquer à gauche');
+keyboardInputProbe.keys = { ArrowRight: true };
+assert.strictEqual(keyboardInputProbe.getPlayerInputs().steer, 1, 'La flèche droite doit braquer à droite');
+console.log('✓ Commandes de direction AZERTY et flèches validées');
 
 // 7. Test dynamique de simulation physique (accélération, freinage, virage)
 const mockCircuit = {
@@ -165,6 +197,34 @@ bike.update(0.1, { throttle: 0.5, brake: 0, steer: 1.0, nitro: false });
 assert(bike.leanAngle !== 0, 'La moto doit pencher lors du braquage');
 const leanDeg = Math.abs(bike.leanAngle * (180 / Math.PI));
 assert(leanDeg <= physicsCfg.maxLeanAngleDeg, 'L inclinaison ne doit pas dépasser le maximum physique');
+
+// Verify both steering directions change heading, not only the visible lean angle.
+const steeringBike = new BikePhysics(bagnaia, mockCircuit, true);
+for (let i = 0; i < 60; i++) {
+  steeringBike.update(0.05, { throttle: 1, brake: 0, steer: 0, nitro: false });
+}
+const yawBeforeLeft = steeringBike.yaw;
+for (let i = 0; i < 12; i++) {
+  steeringBike.update(0.05, { throttle: 1, brake: 0, steer: -1, nitro: false });
+}
+assert(steeringBike.yaw < yawBeforeLeft, 'La direction gauche doit faire tourner la moto à gauche');
+assert(steeringBike.leanAngle < 0, 'La moto doit s’incliner vers la gauche en braquant à gauche');
+assert(steeringBike.steerAngle < 0, 'La roue avant doit pointer à gauche');
+const yawAfterLeft = steeringBike.yaw;
+for (let i = 0; i < 24; i++) {
+  steeringBike.update(0.05, { throttle: 1, brake: 0, steer: 1, nitro: false });
+}
+assert(steeringBike.leanAngle > 0, 'La moto doit s’incliner vers la droite en braquant à droite');
+assert(steeringBike.steerAngle > 0, 'La roue avant doit pointer à droite');
+const yawBeforeRightStep = steeringBike.yaw;
+steeringBike.update(0.05, { throttle: 1, brake: 0, steer: 1, nitro: false });
+assert(steeringBike.yaw > yawBeforeRightStep, 'La direction droite doit faire tourner la moto à droite');
+assert(steeringBike.yaw > yawAfterLeft, 'La moto doit inverser sa trajectoire après le braquage');
+
+const lowSpeedSteeringBike = new BikePhysics(bagnaia, mockCircuit, true);
+lowSpeedSteeringBike.speedKmh = 2;
+lowSpeedSteeringBike.update(0.016, { throttle: 0, brake: 0, steer: -1, nitro: false });
+assert(lowSpeedSteeringBike.yaw < 0, 'La direction doit rester active à faible vitesse');
 
 // Test KERS / Nitro Boost
 const initialNitro = bike.nitro;
